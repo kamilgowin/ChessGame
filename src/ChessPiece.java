@@ -3,6 +3,7 @@ public class ChessPiece {
     private String color;
     private String imagePath;
     public int moves = 0;
+    public int lastMove = 0;
 
     public ChessPiece(String type, String color, String imagePath) {
         this.type = type;

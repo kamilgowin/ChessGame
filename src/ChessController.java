@@ -11,13 +11,18 @@ public class ChessController {
         this.selectedPosition = null;
     }
 
-    public void handleBoardButtonClick(int row, int col) {
+    public void handleBoardButtonClick(int row, int col, boolean deselect) {
         String position = getPosition(row, col);
 
-        if (selectedPosition == null) {
-            handleSelectPosition(position);
-        } else {
-            handleMove(selectedPosition, position);
+        if(!deselect){
+            if (selectedPosition == null) {
+                handleSelectPosition(position);
+            } else {
+                handleMove(selectedPosition, position);
+            }
+        }
+        else {
+            selectedPosition = null;
         }
     }
 
@@ -31,17 +36,21 @@ public class ChessController {
         //}
     }
 
+
     private void handleMove(String from, String to) {
-        if (model.isMoveValid(from, to)) {
+        if (model.isMoveValid(from, to) && model.isMoveSafeForKing(from, to)) {
             model.movePiece(from, to);
-            view.deselect();
-            updateView();
+            updateView(from, to);
             selectedPosition = null;
 
-            if (model.isCheckmate()) {
-                view.showMessage("Checkmate! Game Over.");
-            } else if (model.isStalemate()) {
-                view.showMessage("Stalemate! Game Over.");
+            if (model.isCheckmate("white")) {
+                view.showMessage("Checkmate! Black wins!");
+            } else if (model.isStalemate("white")) {
+                view.showMessage("Stalemate! It's a draw.");
+            } else if (model.isCheckmate("black")) {
+                view.showMessage("Checkmate! White wins!");
+            } else if (model.isStalemate("black")){
+                view.showMessage("Stalemate! It's a draw.");
             }
         } else {
             view.showMessage("Invalid move. Try again.");
@@ -49,8 +58,9 @@ public class ChessController {
         }
     }
 
-    private void updateView() {
+    private void updateView(String from, String to) {
         Map<String, ChessPiece> board = model.getBoard();
+        view.deselect();
         view.updateBoard(board);
     }
 
