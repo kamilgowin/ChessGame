@@ -1,18 +1,16 @@
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 public class ChessView {
     private ChessController controller;
     private JFrame frame;
-    private JPanel chessBoardPanel;
     private JLabel[][] boardLabels;
     private int selectedRow = -1;
     private int selectedCol = -1;
-    private Map<String, ImageIcon> imageCache = new HashMap<>();
+    private final Map<String, ImageIcon> imageCache = new HashMap<>();
     public void setController(ChessController controller) {
         this.controller = controller;
     }
@@ -21,11 +19,10 @@ public class ChessView {
         SwingUtilities.invokeLater(() -> {
             frame = new JFrame("Chess Game");
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-            Dimension screenSize = new Dimension(900, 900);
+            Dimension screenSize = new Dimension(1000, 1000);
             frame.setResizable(false);
             frame.setPreferredSize(screenSize);
             initializeChessBoardPanel();
-            initializeOtherComponents();
 
             frame.pack();
             frame.setLocationRelativeTo(null);
@@ -36,7 +33,7 @@ public class ChessView {
     }
 
     private void initializeChessBoardPanel() {
-        chessBoardPanel = new JPanel(new GridLayout(8, 8));
+        JPanel chessBoardPanel = new JPanel(new GridLayout(8, 8));
         boardLabels = new JLabel[8][8];
 
         for (int row = 0; row < 8; row++) {
@@ -52,6 +49,10 @@ public class ChessView {
         }
 
         frame.add(chessBoardPanel, BorderLayout.CENTER);
+    }
+
+    public void closeFrame(){
+        frame.dispose();
     }
 
     private void setupImageCache(){
@@ -117,56 +118,12 @@ public class ChessView {
         return icon;
     }
 
-    private void initializeOtherComponents() {
-        // Inicjalizacja i konfiguracja innych komponentów interfejsu użytkownika
-    }
-
-//    public void updateBoard(Map<String, ChessPiece> newBoard) {
-//        for (int row = 0; row < 8; row++) {
-//            for (int col = 0; col < 8; col++) {
-//                String position = getPosition(row, col);
-//                ChessPiece piece = newBoard.get(position);
-//                ImageIcon icon = (piece != null) ? new ImageIcon(piece.getImagePath()) : null;
-//
-//                if (icon != null) {
-//                    // Dostosuj rozmiar obrazka do wielkości pola
-//                    Image image = icon.getImage();
-//                    Image scaledImage = image.getScaledInstance(
-//                            boardLabels[row][col].getWidth(),
-//                            boardLabels[row][col].getHeight(),
-//                            Image.SCALE_SMOOTH
-//                    );
-//                    icon = new ImageIcon(scaledImage);
-//                }
-//
-//                boardLabels[row][col].setIcon(icon);
-//                //String displayText = (piece != null) ? piece.getType() : "";
-//                //boardLabels[row][col].setText(displayText);
-//
-//                if (row == selectedRow && col == selectedCol) {
-//                    boardLabels[row][col].setBorder(BorderFactory.createLineBorder(Color.RED, 3));
-//                } else {
-//                    boardLabels[row][col].setBorder(null);
-//                }
-//            }
-//        }
-//    }
-
     public void updateBoard(Map<String, ChessPiece> newBoard) {
         for (int row = 0; row < 8; row++) {
             for (int col = 0; col < 8; col++) {
                 String position = getPosition(row, col);
                 ChessPiece piece = newBoard.get(position);
-//                ImageIcon icon = (piece != null) ? getImageIcon(piece.getImagePath()) : null;
-//                if (icon != null) {
-//                    Image image = icon.getImage();
-//                    Image scaledImage = image.getScaledInstance(
-//                            boardLabels[row][col].getWidth(),
-//                            boardLabels[row][col].getHeight(),
-//                            Image.SCALE_SMOOTH
-//                    );
-//                    icon = new ImageIcon(scaledImage);
-//                }
+
                 ImageIcon icon = null;
                 if(piece != null){
                     icon = imageCache.get(piece.getImagePath());
@@ -175,24 +132,53 @@ public class ChessView {
                 boardLabels[row][col].setIcon(icon);
 
                 if (position.equals(controller.getModel().getCheckedKingPosition())) {
-                    boardLabels[row][col].setBackground(Color.PINK);
+                    boardLabels[row][col].setBackground(Color.getHSBColor(1.94f, 1, 0.75f));
                 } else {
                     boardLabels[row][col].setBackground(getSquareColor(row, col));
                 }
 
+                String selectedPosition = getPosition(selectedRow, selectedCol);
 
                 if (row == selectedRow && col == selectedCol) {
-                    boardLabels[row][col].setBorder(BorderFactory.createLineBorder(Color.RED, 3));
+                    boardLabels[row][col].setBorder(BorderFactory.createLineBorder(Color.GREEN, 4));
+                } else if (controller.getModel().isMoveValid(selectedPosition, position, false, false) && controller.getModel().isMoveSafeForKing(selectedPosition, position)) {
+                    if(controller.getModel().getBoard().get(position) != null) {
+                        boardLabels[row][col].setBorder(BorderFactory.createLineBorder(Color.RED, 4));
+                        boardLabels[row][col].setBackground(Color.PINK);
+                    }
+                    else {
+                        boardLabels[row][col].setBorder(BorderFactory.createLineBorder(Color.BLUE, 4));
+                        boardLabels[row][col].setBackground(Color.getHSBColor(1.6f, 0.3f, 1f));
+                    }
+
                 } else {
                     boardLabels[row][col].setBorder(null);
+                    if(boardLabels[row][col].getBackground() == Color.PINK || Objects.equals(boardLabels[row][col].getBackground(), Color.getHSBColor(1.6f, 0.5f, 1f))){
+                        boardLabels[row][col].setBackground(getSquareColor(row, col));
+                    }
                 }
             }
         }
     }
 
-    void deselect(){
-        selectedRow = -1;
-        selectedCol = -1;
+    public String choosePawnPromotion(){
+        Object[] options = {"Queen", "Rook", "Knight", "Bishop"};
+        int choice = JOptionPane.showOptionDialog(null,
+                "Choose piece to promote pawn to:",
+                "Pawn promotion",
+                JOptionPane.YES_NO_CANCEL_OPTION,
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                options,
+                options[0]);
+
+        return switch (choice) {
+            case 0 -> "queen";
+            case 1 -> "rook";
+            case 2 -> "knight";
+            case 3 -> "bishop";
+            default -> "queen";
+        };
     }
 
 
@@ -212,8 +198,8 @@ public class ChessView {
 
 
     private class ChessBoardMouseListener extends java.awt.event.MouseAdapter {
-        private int row;
-        private int col;
+        private final int row;
+        private final int col;
 
         public ChessBoardMouseListener(int row, int col) {
             this.row = row;
@@ -223,7 +209,6 @@ public class ChessView {
         @Override
         public void mouseClicked(java.awt.event.MouseEvent evt) {
             if (selectedRow == row && selectedCol == col) {
-                // Odznacz pole po ponownym kliknięciu
                 controller.handleBoardButtonClick(row,col,true);
                 selectedRow = -1;
                 selectedCol = -1;

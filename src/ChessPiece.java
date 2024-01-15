@@ -1,7 +1,7 @@
 public class ChessPiece {
-    private String type;
-    private String color;
-    private String imagePath;
+    private final String type;
+    private final String color;
+    private final String imagePath;
     public int moves = 0;
     public int lastMove = 0;
 

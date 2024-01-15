@@ -1,17 +1,21 @@
 import java.util.*;
 
 public class ChessModel {
-    private Map<String, ChessPiece> board;
+    private final Map<String, ChessPiece> board;
     private String checkedKingPosition;
-    private int moves = 0;
+    public int moves;
+    private String nextMove;
+    private final Context context = new Context();
 
     public ChessModel() {
         board = new HashMap<>();
         initializeBoard();
     }
 
-    private void initializeBoard() {
-        // Początkowy stan planszy
+    public void initializeBoard() {
+        board.clear();
+        nextMove = "white";
+        moves = 0;
 
         placePiece("A1", new ChessPiece("rook", "white","Images/WhiteRook.png"));
         placePiece("B1", new ChessPiece("knight", "white","Images/WhiteKnight.png"));
@@ -60,7 +64,7 @@ public class ChessModel {
         if (piece != null) {
             board.put(to, piece);
             piece.moves++;
-            // Sprawdź, czy król został zaszachowany po ruchu
+
             String kingColor = piece.getColor().equals("white") ? "black" : "white";
             String kingPosition = getKingPosition(kingColor);
 
@@ -71,22 +75,32 @@ public class ChessModel {
             }
             moves++;
             piece.lastMove = moves;
-            System.out.println(moves);
+            if(Objects.equals(nextMove, "white")){
+                nextMove = "black";
+            } else if (Objects.equals(nextMove, "black")) {
+                nextMove = "white";
+            }
         }
     }
 
 
 
-    public boolean isMoveValid(String from, String to) {
+    public boolean isMoveValid(String from, String to, boolean skipOrder, boolean executeSpecialMoves) {
         ChessPiece piece = board.get(from);
         ChessPiece targetPiece = board.get(to);
 
         if (piece == null) {
-            return false; // Ruch nieprawidłowy, bo brak figury do przesunięcia lub docelowe pole już zajęte
+            return false;
         }
 
         if (targetPiece != null && Objects.equals(piece.getColor(), targetPiece.getColor())){
             return false;
+        }
+
+        if(!skipOrder){
+            if(!Objects.equals(piece.getColor(), nextMove)){
+                return false;
+            }
         }
 
         int fromRank = Integer.parseInt(from.substring(1));
@@ -98,244 +112,76 @@ public class ChessModel {
         int fileDifference = Math.abs(toFile - fromFile);
 
         if(Objects.equals(piece.getType(), "pawn")){
-            return isPawnMoveValid(piece, targetPiece, fromRank, toRank, fromFile, toFile, rankDifference, fileDifference);
+            context.setStrategy(new PawnValidMoves(this));
         }
         if(Objects.equals(piece.getType(), "king")){
-            return isKingMoveValid(piece, targetPiece, fromRank, toRank, fromFile, toFile, rankDifference, fileDifference);
+            context.setStrategy(new KingValidMoves(this));
         }
         if(Objects.equals(piece.getType(), "knight")){
-            return isKnightMoveValid(piece, targetPiece, fromRank, toRank, fromFile, toFile, rankDifference, fileDifference);
+            context.setStrategy(new KnightValidMoves(this));
         }
         if(Objects.equals(piece.getType(), "rook")){
-            return isRookMoveValid(piece, targetPiece, fromRank, toRank, fromFile, toFile, rankDifference, fileDifference);
+            context.setStrategy(new RookValidMoves(this));
         }
         if(Objects.equals(piece.getType(), "bishop")){
-            return isBishopMoveValid(piece, targetPiece, fromRank, toRank, fromFile, toFile, rankDifference, fileDifference);
+            context.setStrategy(new BishopValidMoves(this));
         }
         if(Objects.equals(piece.getType(), "queen")){
-            if(isBishopMoveValid(piece, targetPiece, fromRank, toRank, fromFile, toFile, rankDifference, fileDifference) || isRookMoveValid(piece, targetPiece, fromRank, toRank, fromFile, toFile, rankDifference, fileDifference)){
-                return true;
-            }
-            return false;
+            context.setStrategy(new QueenValidMoves(this));
         }
-
-        return false;
+        return context.executeStrategy(piece, targetPiece, fromRank, toRank, fromFile, toFile, rankDifference, fileDifference, executeSpecialMoves);
     }
 
-    public boolean isBishopMoveValid(ChessPiece piece, ChessPiece targetPiece, int fromRank, int toRank, int fromFile, int toFile, int rankDifference, int fileDifference){
-        if(rankDifference > 0 && fileDifference > 0 && fileDifference == rankDifference){
-            if(toRank > fromRank && toFile > fromFile){
-                for (int i = 1; i < rankDifference; i++) {
-                    if (board.get(getPosition(fromFile+i,fromRank+i)) != null){
-                        return false;
-                    }
-                }
+    public void promotePawn(String color, String to, String type, int pieceMoves){
+        String path = null;
+        if(color.equals("white")){
+            if(Objects.equals(type, "queen")){
+                path = "Images/WhiteQueen.png";
             }
-            if(toRank > fromRank && toFile < fromFile){
-                for (int i = 1; i < rankDifference; i++) {
-                    if (board.get(getPosition(fromFile-i,fromRank+i)) != null){
-                        return false;
-                    }
-                }
+            if(Objects.equals(type, "rook")){
+                path = "Images/WhiteRook.png";
             }
-            if(toRank < fromRank && toFile > fromFile){
-                for (int i = 1; i < rankDifference; i++) {
-                    if (board.get(getPosition(fromFile+i,fromRank-i)) != null){
-                        return false;
-                    }
-                }
+            if(Objects.equals(type, "knight")){
+                path = "Images/WhiteKnight.png";
             }
-            if(toRank < fromRank && toFile < fromFile){
-                for (int i = 1; i < rankDifference; i++) {
-                    if (board.get(getPosition(fromFile-i,fromRank-i)) != null){
-                        return false;
-                    }
-                }
+            if(Objects.equals(type, "bishop")){
+                path = "Images/WhiteBishop.png";
             }
-            return true;
         }
-        return false;
+        if(color.equals("black")){
+            if(Objects.equals(type, "queen")){
+                path = "Images/BlackQueen.png";
+            }
+            if(Objects.equals(type, "rook")){
+                path = "Images/BlackRook.png";
+            }
+            if(Objects.equals(type, "knight")){
+                path = "Images/BlackKnight.png";
+            }
+            if(Objects.equals(type, "bishop")){
+                path = "Images/BlackBishop.png";
+            }
+        }
+        if(path != null){
+            ChessPiece promotedPiece = new ChessPiece(type, color, path);
+            moves++;
+            promotedPiece.lastMove = moves+1;
+            promotedPiece.moves = pieceMoves;
+            board.put(to, promotedPiece);
+            String kingColor = color.equals("white") ? "black" : "white";
+            String kingPosition = getKingPosition(kingColor);
+
+            if (isFieldInCheck(kingPosition, kingColor)) {
+                checkedKingPosition = kingPosition;
+            } else {
+                checkedKingPosition = null;
+            }
+        }
     }
 
-    public boolean isRookMoveValid(ChessPiece piece, ChessPiece targetPiece, int fromRank, int toRank, int fromFile, int toFile, int rankDifference, int fileDifference){
-        if(rankDifference > 0 && fileDifference == 0){
-            if(toRank > fromRank){
-                for (int i = 1; i < rankDifference; i++) {
-                   if (board.get(getPosition(fromFile,fromRank+i)) != null){
-                       return false;
-                   }
-                }
-                return true;
-            }
-
-            if(toRank < fromRank){
-                for (int i = 1; i < rankDifference; i++) {
-                    if (board.get(getPosition(fromFile,fromRank-i)) != null){
-                        return false;
-                    }
-                }
-                return true;
-            }
-        }
-
-        if(rankDifference == 0 && fileDifference > 0){
-            if(toFile > fromFile){
-                for (int i = 1; i < fileDifference; i++) {
-                    if (board.get(getPosition(fromFile+i,fromRank)) != null){
-                        return false;
-                    }
-                }
-                return true;
-            }
-
-            if(toFile < fromFile){
-                for (int i = 1; i < fileDifference; i++) {
-                    if (board.get(getPosition(fromFile-i,fromRank)) != null){
-                        return false;
-                    }
-                }
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    public boolean isKnightMoveValid(ChessPiece piece, ChessPiece targetPiece, int fromRank, int toRank, int fromFile, int toFile, int rankDifference, int fileDifference){
-        if((rankDifference == 1 && fileDifference == 2) || (rankDifference == 2 && fileDifference == 1)){
-            if(targetPiece == null){
-                return true;
-            }
-            if(!Objects.equals(targetPiece.getColor(), piece.getColor())){
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public boolean isKingMoveValid(ChessPiece piece, ChessPiece targetPiece, int fromRank, int toRank, int fromFile, int toFile, int rankDifference, int fileDifference){
-        if(rankDifference <= 1 && fileDifference <= 1){
-            if(targetPiece == null){
-                return true;
-            }
-            if(!Objects.equals(targetPiece.getColor(), piece.getColor())){
-                return true;
-            }
-        }
-        //roszada
-        if(Objects.equals(piece.getColor(), "white")){
-            if(rankDifference == 0 && toFile == 7){
-                if(piece.moves == 0 && board.get(getPosition(toFile+1,toRank)).moves == 0){
-                    if(board.get(getPosition(toFile,toRank)) == null && board.get(getPosition(toFile-1,toRank)) == null){
-                        if(!isFieldInCheck("F1","white") && !isFieldInCheck("G1","white")){
-                            movePiece("H1", "F1");
-                            return true;
-                        }
-                    }
-                }
-            }
-
-            if(rankDifference == 0 && toFile == 3){
-                if(piece.moves == 0 && board.get(getPosition(toFile-2,toRank)).moves == 0){
-                    if(board.get(getPosition(toFile,toRank)) == null && board.get(getPosition(toFile-1,toRank)) == null && board.get(getPosition(toFile+1,toRank)) == null){
-                        if(!isFieldInCheck("B1","white") && !isFieldInCheck("C1","white") && !isFieldInCheck("D1","white")){
-                            movePiece("A1", "D1");
-                            return true;
-                        }
-                    }
-                }
-            }
-        }
-
-        if(Objects.equals(piece.getColor(), "black")){
-            if(rankDifference == 0 && toFile == 7){
-                if(piece.moves == 0 && board.get(getPosition(toFile+1,toRank)).moves == 0){
-                    if(board.get(getPosition(toFile,toRank)) == null && board.get(getPosition(toFile-1,toRank)) == null){
-                        if(!isFieldInCheck("F8","black") && !isFieldInCheck("G8","black")){
-                            movePiece("H8", "F8");
-                            return true;
-                        }
-                    }
-                }
-            }
-
-            if(rankDifference == 0 && toFile == 3){
-                if(piece.moves == 0 && board.get(getPosition(toFile-2,toRank)).moves == 0){
-                    if(board.get(getPosition(toFile,toRank)) == null && board.get(getPosition(toFile-1,toRank)) == null && board.get(getPosition(toFile+1,toRank)) == null){
-                        if(!isFieldInCheck("B8","black") && !isFieldInCheck("C8","black") && !isFieldInCheck("D8","black")){
-                            movePiece("A8", "D8");
-                            return true;
-                        }
-                    }
-                }
-            }
-        }
-
-
-        return false;
-    }
-
-    public boolean isPawnMoveValid(ChessPiece piece, ChessPiece targetPiece, int fromRank, int toRank, int fromFile, int toFile, int rankDifference, int fileDifference){
-
-        if(Objects.equals(piece.getColor(), "white")){
-            if((fromRank - toRank) == -1 && targetPiece == null && fileDifference == 0){
-                return true;
-            }
-            if((fromRank - toRank) == -2 && targetPiece == null && piece.moves == 0 && fileDifference == 0 && board.get(getPosition(fromFile,fromRank+1)) == null){
-                return true;
-            }
-            if(fileDifference == 1 && (fromRank - toRank) == -1 && targetPiece != null){
-                if(Objects.equals(targetPiece.getColor(), "black")){
-                    return true;
-                }
-            }
-            //en passant
-            if(fileDifference == 1 && (fromRank - toRank) == -1 && targetPiece == null){
-                if(board.get(getPosition(toFile,toRank-1)) != null){
-                    if (Objects.equals(board.get(getPosition(toFile, toRank - 1)).getType(), "pawn") && Objects.equals(board.get(getPosition(toFile, toRank - 1)).getColor(), "black")){
-                        if (board.get(getPosition(toFile,toRank-1)).moves == 1 && board.get(getPosition(toFile,toRank-1)).lastMove == moves ){
-                            board.remove(getPosition(toFile,toRank-1));
-                            return true;
-                        }
-                    }
-                }
-            }
-
-        }
-
-        if(Objects.equals(piece.getColor(), "black")){
-            if((fromRank - toRank) == 1 && targetPiece == null && fileDifference == 0){
-                return true;
-            }
-            if((fromRank - toRank) == 2 && targetPiece == null && piece.moves == 0 && fileDifference == 0 && board.get(getPosition(fromFile,fromRank-1)) == null){
-                return true;
-            }
-            if(fileDifference == 1 && (fromRank - toRank) == 1 && targetPiece != null){
-                if(Objects.equals(targetPiece.getColor(), "white")){
-                    return true;
-                }
-            }
-            //en passant
-            if(fileDifference == 1 && (fromRank - toRank) == 1 && targetPiece == null){
-                if(board.get(getPosition(toFile,toRank+1)) != null){
-                    if (Objects.equals(board.get(getPosition(toFile, toRank + 1)).getType(), "pawn") && Objects.equals(board.get(getPosition(toFile, toRank + 1)).getColor(), "white")){
-                        if (board.get(getPosition(toFile,toRank+1)).moves == 1 && board.get(getPosition(toFile,toRank+1)).lastMove == moves ){
-                            board.remove(getPosition(toFile,toRank+1));
-                            return true;
-                        }
-                    }
-                }
-            }
-
-        }
-
-        return false;
-    }
-
-    private String getPosition(int file, int rank) {
+    public String getPosition(int file, int rank) {
         return String.valueOf((char) ('A' + file - 1)) + rank;
     }
-
 
     public boolean isFieldInCheck(String fieldPosition, String fieldColor) {
         for (Map.Entry<String, ChessPiece> entry : board.entrySet()) {
@@ -343,8 +189,7 @@ public class ChessModel {
             ChessPiece piece = entry.getValue();
 
             if (!piece.getColor().equals(fieldColor)) {
-                // Sprawdź, czy figura przeciwnika może zaatakować króla
-                if (isMoveValid(currentPosition, fieldPosition)) {
+                if (isMoveValid(currentPosition, fieldPosition, true, false)) {
                     return true;
                 }
             }
@@ -359,19 +204,15 @@ public class ChessModel {
 
         String kingColor = movedPiece.getColor();
 
-        // Wykonaj ruch wirtualny na planszy
         board.remove(from);
         board.put(to, movedPiece);
 
-        // Sprawdź, czy po ruchu król jest nadal szachowany
         boolean isSafe = !isFieldInCheck(getKingPosition(kingColor), kingColor);
 
-        // Cofnij ruch na planszy
         board.remove(to);
         board.put(from, movedPiece);
 
         if (targetPiece != null) {
-            // Jeśli było bicie, przywróć zbitego pionka
             board.put(to, targetPiece);
         }
 
@@ -385,18 +226,16 @@ public class ChessModel {
                 return entry.getKey();
             }
         }
-        return null; // To nigdy nie powinno się zdarzyć, jeśli plansza jest poprawnie skonfigurowana
+        return null;
     }
 
     public boolean isCheckmate(String kingColor) {
         String kingPosition = getKingPosition(kingColor);
 
         if (!isFieldInCheck(kingPosition, kingColor)) {
-            // Król nie jest w szachu, więc nie może być matu
             return false;
         }
 
-        // Sprawdź, czy król ma możliwość ucieczki na wolne pole
         assert kingPosition != null;
         int kingFile = kingPosition.charAt(0) - 'A' + 1;
         int kingRank = Integer.parseInt(kingPosition.substring(1));
@@ -404,7 +243,7 @@ public class ChessModel {
         for (int fileDelta = -1; fileDelta <= 1; fileDelta++) {
             for (int rankDelta = -1; rankDelta <= 1; rankDelta++) {
                 if (fileDelta == 0 && rankDelta == 0) {
-                    continue;  // Pomijamy pozycję samego króla
+                    continue;
                 }
 
                 int targetFile = kingFile + fileDelta;
@@ -413,14 +252,13 @@ public class ChessModel {
                 if (isValidPosition(targetFile, targetRank)) {
                     String targetPosition = getPosition(targetFile, targetRank);
 
-                    if (isMoveValid(kingPosition, targetPosition) && isMoveSafeForKing(kingPosition, targetPosition)) {
-                        return false;  // Król ma możliwość ucieczki
+                    if (isMoveValid(kingPosition, targetPosition, true, false) && isMoveSafeForKing(kingPosition, targetPosition)) {
+                        return false;
                     }
                 }
             }
         }
 
-        // Sprawdź, czy istnieje możliwość zablokowania szacha
         Map<String, ChessPiece> originalBoard = new HashMap<>(board);
 
         for (Map.Entry<String, ChessPiece> entry : originalBoard.entrySet()) {
@@ -428,13 +266,12 @@ public class ChessModel {
             ChessPiece piece = entry.getValue();
 
             if (piece.getColor().equals(kingColor)) {
-                // Sprawdź, czy dla każdej figury króla można zablokować szacha
                 for (int row = 1; row <= 8; row++) {
                     for (int col = 1; col <= 8; col++) {
                         String targetPosition = getPosition(row, col);
 
-                        if (isMoveValid(currentPosition, targetPosition) && isMoveSafeForKing(currentPosition, targetPosition)) {
-                            return false;  // Można zablokować szacha
+                        if (isMoveValid(currentPosition, targetPosition, true, false) && isMoveSafeForKing(currentPosition, targetPosition)) {
+                            return false;
                         }
                     }
                 }
@@ -444,19 +281,15 @@ public class ChessModel {
         return true;
     }
 
-
     private boolean isValidPosition(int file, int rank) {
         return file >= 1 && file <= 8 && rank >= 1 && rank <= 8;
     }
 
-
     public boolean isStalemate(String playerColor) {
-        // Sprawdź, czy król gracza nie jest w szachu
         if (isFieldInCheck(getKingPosition(playerColor), playerColor)) {
-            return false; // Król jest w szachu, więc nie ma patu
+            return false;
         }
 
-        // Sprawdź, czy gracz nie ma żadnych legalnych ruchów
         for (Map.Entry<String, ChessPiece> entry : board.entrySet()) {
             String currentPosition = entry.getKey();
             ChessPiece piece = entry.getValue();
@@ -466,15 +299,73 @@ public class ChessModel {
                     for (int col = 1; col <= 8; col++) {
                         String targetPosition = getPosition(row, col);
 
-                        if (isMoveValid(currentPosition, targetPosition) && isMoveSafeForKing(currentPosition, targetPosition)) {
-                            return false; // Gracz ma legalny ruch
+                        if (isMoveValid(currentPosition, targetPosition, true, false) && isMoveSafeForKing(currentPosition, targetPosition)) {
+                            return false;
                         }
                     }
                 }
             }
         }
 
-        return true; // Brak legalnych ruchów, występuje pat
+        return true;
+    }
+
+    public boolean isInsufficientMaterial() {
+        int whiteKingsCount = 0;
+        int whiteKnightsCount = 0;
+        int whiteBishopsCount = 0;
+        int blackKingsCount = 0;
+        int blackKnightsCount = 0;
+        int blackBishopsCount = 0;
+
+        for (Map.Entry<String, ChessPiece> entry : board.entrySet()) {
+            ChessPiece piece = entry.getValue();
+            String type = piece.getType();
+            String color = piece.getColor();
+
+            switch (type) {
+                case "king" -> {
+                    if (color.equals("white")) {
+                        whiteKingsCount++;
+                    }
+                    if (color.equals("black")) {
+                        blackKingsCount++;
+                    }
+                }
+                case "knight" -> {
+                    if (color.equals("white")) {
+                        whiteKnightsCount++;
+                    }
+                    if (color.equals("black")) {
+                        blackKnightsCount++;
+                    }
+                }
+                case "bishop" -> {
+                    if (color.equals("white")) {
+                        whiteBishopsCount++;
+                    }
+                    if (color.equals("black")) {
+                        blackBishopsCount++;
+                    }
+                }
+            }
+        }
+        int whitePieces = whiteKingsCount + whiteKnightsCount + whiteBishopsCount;
+        int blackPieces = blackKingsCount + blackKnightsCount + blackBishopsCount;
+
+        if(whitePieces+blackPieces != board.size()){
+            return false;
+        }
+
+        if((whitePieces == 1 && blackPieces == 3 && blackKnightsCount == 2) || (blackPieces == 1 && whitePieces == 3 && whiteKnightsCount == 2)){
+            return true;
+        }
+
+        if(whitePieces <=2 && blackPieces <= 2){
+            return true;
+        }
+
+        return false;
     }
 
     public ChessPiece getPieceAt(String position) {
@@ -484,6 +375,7 @@ public class ChessModel {
     public Map<String, ChessPiece> getBoard() {
         return board;
     }
+
     public String getCheckedKingPosition() {
         return checkedKingPosition;
     }
