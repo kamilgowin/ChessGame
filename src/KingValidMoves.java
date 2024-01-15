@@ -22,7 +22,7 @@ public class KingValidMoves implements Strategy{
                 if(model.getBoard().get(model.getPosition(toFile+1,toRank)) != null){
                     if(piece.moves == 0 && model.getBoard().get(model.getPosition(toFile+1,toRank)).moves == 0){
                         if(model.getBoard().get(model.getPosition(toFile,toRank)) == null && model.getBoard().get(model.getPosition(toFile-1,toRank)) == null){
-                            if(!model.isFieldInCheck("F1","white") && !model.isFieldInCheck("G1","white")){
+                            if(!model.isFieldInCheck("F1","white") && !model.isFieldInCheck("G1","white") && !model.isFieldInCheck("E1", "white")){
                                 if(executeSpecialMoves){
                                     model.getBoard().put("F1",model.getBoard().remove("H1"));
                                 }
@@ -37,7 +37,7 @@ public class KingValidMoves implements Strategy{
                 if(model.getBoard().get(model.getPosition(toFile-2,toRank)) != null){
                     if(piece.moves == 0 && model.getBoard().get(model.getPosition(toFile-2,toRank)).moves == 0){
                         if(model.getBoard().get(model.getPosition(toFile,toRank)) == null && model.getBoard().get(model.getPosition(toFile-1,toRank)) == null && model.getBoard().get(model.getPosition(toFile+1,toRank)) == null){
-                            if(!model.isFieldInCheck("B1","white") && !model.isFieldInCheck("C1","white") && !model.isFieldInCheck("D1","white")){
+                            if(!model.isFieldInCheck("B1","white") && !model.isFieldInCheck("C1","white") && !model.isFieldInCheck("D1","white") && !model.isFieldInCheck("E1", "white")){
                                 if(executeSpecialMoves){
                                     model.getBoard().put("D1",model.getBoard().remove("A1"));
                                 }
@@ -54,7 +54,7 @@ public class KingValidMoves implements Strategy{
                 if(model.getBoard().get(model.getPosition(toFile+1,toRank)) != null){
                     if(piece.moves == 0 && model.getBoard().get(model.getPosition(toFile+1,toRank)).moves == 0){
                         if(model.getBoard().get(model.getPosition(toFile,toRank)) == null && model.getBoard().get(model.getPosition(toFile-1,toRank)) == null){
-                            if(!model.isFieldInCheck("F8","black") && !model.isFieldInCheck("G8","black")){
+                            if(!model.isFieldInCheck("F8","black") && !model.isFieldInCheck("G8","black") && !model.isFieldInCheck("E8", "black")){
                                 if(executeSpecialMoves){
                                     model.getBoard().put("F8",model.getBoard().remove("H8"));
                                 }
@@ -69,7 +69,7 @@ public class KingValidMoves implements Strategy{
                 if(model.getBoard().get(model.getPosition(toFile-2,toRank)) != null){
                     if(piece.moves == 0 && model.getBoard().get(model.getPosition(toFile-2,toRank)).moves == 0){
                         if(model.getBoard().get(model.getPosition(toFile,toRank)) == null && model.getBoard().get(model.getPosition(toFile-1,toRank)) == null && model.getBoard().get(model.getPosition(toFile+1,toRank)) == null){
-                            if(!model.isFieldInCheck("B8","black") && !model.isFieldInCheck("C8","black") && !model.isFieldInCheck("D8","black")){
+                            if(!model.isFieldInCheck("B8","black") && !model.isFieldInCheck("C8","black") && !model.isFieldInCheck("D8","black") && !model.isFieldInCheck("E8", "black")){
                                 if(executeSpecialMoves){
                                     model.getBoard().put("D8",model.getBoard().remove("A8"));
                                 }
