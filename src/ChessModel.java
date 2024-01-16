@@ -16,6 +16,7 @@ public class ChessModel {
         board.clear();
         nextMove = "white";
         moves = 0;
+        checkedKingPosition = "";
 
         placePiece("A1", new ChessPiece("rook", "white","Images/WhiteRook.png"));
         placePiece("B1", new ChessPiece("knight", "white","Images/WhiteKnight.png"));
